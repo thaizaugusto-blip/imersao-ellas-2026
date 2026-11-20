@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Eu Vou - Imersão ELLAS 2026</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f5f2eb;
+      color: #143638;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 16px 14px 32px;
+    }
+    .header {
+      text-align: center;
+      max-width: 400px;
+      margin-bottom: 12px;
+    }
+    .header h1 {
+      font-size: 1.25rem;
+      color: #0b6e72;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+    .header p {
+      font-size: 0.9rem;
+      color: #4a6364;
+      line-height: 1.35;
+    }
+    .canvas-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 310px;
+      aspect-ratio: 9 / 16;
+      background: #e9e4d9;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 12px 28px rgba(11, 110, 114, 0.16);
+      touch-action: none;
+      user-select: none;
+      margin-bottom: 14px;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .hint-badge {
+      position: absolute;
+      top: 52%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(11, 110, 114, 0.9);
+      color: #fff;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 10px 16px;
+      border-radius: 999px;
+      pointer-events: none;
+      text-align: center;
+      white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+    }
+    .controls {
+      width: 100%;
+      max-width: 340px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .zoom-bar {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: #fff;
+      padding: 8px 14px;
+      border-radius: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .zoom-bar.active { display: flex; }
+    .zoom-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1px solid #cce0e0;
+      background: #f0f7f7;
+      color: #0b6e72;
+      font-size: 1.2rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    input[type="range"] {
+      flex: 1;
+      accent-color: #0b6e72;
+    }
+    .btn {
+      width: 100%;
+      padding: 15px 18px;
+      border: none;
+      border-radius: 14px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform 0.1s ease;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary {
+      background: #0b6e72;
+      color: #ffffff;
+      box-shadow: 0 6px 16px rgba(11, 110, 114, 0.25);
+    }
+    .btn-secondary {
+      background: #ffffff;
+      color: #0b6e72;
+      border: 2px solid #0b6e72;
+    }
+    .btn-download {
+      background: #198754;
+      color: #ffffff;
+      box-shadow: 0 6px 16px rgba(25, 135, 84, 0.25);
+      display: none;
+    }
+    .btn-download.active { display: flex; }
+    .steps {
+      margin-top: 14px;
+      max-width: 340px;
+      background: #fff;
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-size: 0.85rem;
+      color: #3d5455;
+      line-height: 1.45;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .steps strong { color: #0b6e72; }
+    input[type="file"] { display: none; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Imersão ELLAS 2026</h1>
+    <p>Coloque sua foto na moldura oficial e compartilhe nos seus Stories!</p>
+  </div>
+
+  <div class="canvas-wrapper" id="canvasWrapper">
+    <canvas id="storyCanvas" width="1080" height="1920"></canvas>
+    <div class="hint-badge" id="hintBadge">Sua foto aparece aqui</div>
+  </div>
+
+  <div class="controls">
+    <div class="zoom-bar" id="zoomBar">
+      <button type="button" class="zoom-btn" id="zoomOut">−</button>
+      <input type="range" id="zoomSlider" min="0.3" max="3" step="0.02" value="1" />
+      <button type="button" class="zoom-btn" id="zoomIn">+</button>
+    </div>
+
+    <label for="photoInput" class="btn btn-primary" id="uploadLabel">
+      📷 Escolher minha foto
+    </label>
+    <input type="file" id="photoInput" accept="image/*" />
+
+    <button type="button" class="btn btn-download" id="downloadBtn">
+      ⬇️ Baixar imagem para o Story
+    </button>
+  </div>
+
+  <div class="steps">
+    <strong>Como fazer:</strong><br/>
+    1. Toque em <strong>Escolher minha foto</strong> e pegue da galeria.<br/>
+    2. Arraste a foto com o dedo para encaixar seu rosto no arco.<br/>
+    3. Toque em <strong>Baixar imagem</strong> e poste nos Stories!
+  </div>
+
+  <script>
+    const canvas = document.getElementById('storyCanvas');
+    const ctx = canvas.getContext('2d');
+    const photoInput = document.getElementById('photoInput');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const uploadLabel = document.getElementById('uploadLabel');
+    const hintBadge = document.getElementById('hintBadge');
+    const zoomBar = document.getElementById('zoomBar');
+    const zoomSlider = document.getElementById('zoomSlider');
+    const zoomIn = document.getElementById('zoomIn');
+    const zoomOut = document.getElementById('zoomOut');
+
+    const frameImg = new Image();
+    frameImg.src = 'moldura.png';
+
+    let userImg = null;
+    // Centro aproximado do arco na arte (X: 540, Y: 960)
+    let imgX = 540;
+    let imgY = 960;
+    let imgScale = 1;
+
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+    let initialPinchDist = null;
+    let initialScale = 1;
+
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Fundo neutro claro por trás do arco
+      ctx.fillStyle = '#f4f1ea';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (userImg) {
+        ctx.save();
+        ctx.translate(imgX, imgY);
+        ctx.scale(imgScale, imgScale);
+        ctx.drawImage(userImg, -userImg.width / 2, -userImg.height / 2);
+        ctx.restore();
+      }
+
+      if (frameImg.complete && frameImg.naturalWidth > 0) {
+        ctx.drawImage(frameImg, 0, 0, canvas.width, canvas.height);
+      }
+    }
+
+    frameImg.onload = render;
+
+    photoInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          userImg = img;
+          // Ajusta escala inicial para cobrir bem a área do arco (~620x720 px)
+          const scaleW = 650 / img.width;
+          const scaleH = 760 / img.height;
+          imgScale = Math.max(scaleW, scaleH);
+          imgX = 540;
+          imgY = 980;
+
+          zoomSlider.value = imgScale;
+          zoomSlider.min = (imgScale * 0.4).toFixed(2);
+          zoomSlider.max = (imgScale * 3).toFixed(2);
+
+          hintBadge.style.display = 'none';
+          zoomBar.classList.add('active');
+          downloadBtn.classList.add('active');
+          uploadLabel.textContent = '🔄 Trocar foto';
+          uploadLabel.classList.remove('btn-primary');
+          uploadLabel.classList.add('btn-secondary');
+          render();
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Controle de zoom
+    zoomSlider.addEventListener('input', (e) => {
+      imgScale = parseFloat(e.target.value);
+      render();
+    });
+
+    zoomIn.addEventListener('click', () => {
+      imgScale = Math.min(parseFloat(zoomSlider.max), imgScale + 0.08);
+      zoomSlider.value = imgScale;
+      render();
+    });
+
+    zoomOut.addEventListener('click', () => {
+      imgScale = Math.max(parseFloat(zoomSlider.min), imgScale - 0.08);
+      zoomSlider.value = imgScale;
+      render();
+    });
+
+    // Arrastar com mouse ou dedo
+    function getCanvasCoords(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (clientX - rect.left) * (canvas.width / rect.width),
+        y: (clientY - rect.top) * (canvas.height / rect.height)
+      };
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      if (!userImg) return;
+      isDragging = true;
+      const pos = getCanvasCoords(e.clientX, e.clientY);
+      startX = pos.x - imgX;
+      startY = pos.y - imgY;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const pos = getCanvasCoords(e.clientX, e.clientY);
+      imgX = pos.x - startX;
+      imgY = pos.y - startY;
+      render();
+    });
+
+    window.addEventListener('mouseup', () => { isDragging = false; });
+
+    canvas.addEventListener('touchstart', (e) => {
+      if (!userImg) return;
+      if (e.touches.length === 1) {
+        isDragging = true;
+        const pos = getCanvasCoords(e.touches[0].clientX, e.touches[0].clientY);
+        startX = pos.x - imgX;
+        startY = pos.y - imgY;
+      } else if (e.touches.length === 2) {
+        isDragging = false;
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        initialPinchDist = Math.hypot(dx, dy);
+        initialScale = imgScale;
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+      if (!userImg) return;
+      e.preventDefault();
+      if (e.touches.length === 1 && isDragging) {
+        const pos = getCanvasCoords(e.touches[0].clientX, e.touches[0].clientY);
+        imgX = pos.x - startX;
+        imgY = pos.y - startY;
+        render();
+      } else if (e.touches.length === 2 && initialPinchDist) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.hypot(dx, dy);
+        imgScale = Math.min(parseFloat(zoomSlider.max), Math.max(parseFloat(zoomSlider.min), initialScale * (dist / initialPinchDist)));
+        zoomSlider.value = imgScale;
+        render();
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', () => {
+      isDragging = false;
+      initialPinchDist = null;
+    });
+
+    // Download / Compartilhar no celular
+    downloadBtn.addEventListener('click', () => {
+      if (!userImg) return;
+      const dataUrl = canvas.toDataURL('image/png', 1.0);
+      const link = document.createElement('a');
+      link.download = 'eu-vou-imersao-ellas-2026.png';
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+  </script>
+</body>
+</html>
