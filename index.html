@@ -14,7 +14,7 @@
       flex-direction: column;
       align-items: center;
       min-height: 100vh;
-      padding: 16px 14px 32px;
+      padding: 16px 14px 36px;
     }
     .header {
       text-align: center;
@@ -144,6 +144,52 @@
     }
     .steps strong { color: #0b6e72; }
     input[type="file"] { display: none; }
+
+    /* Modal para salvar imagem com facilidade em qualquer celular */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.78);
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    }
+    .modal-backdrop.active { display: flex; }
+    .modal-card {
+      background: #fff;
+      border-radius: 18px;
+      max-width: 360px;
+      width: 100%;
+      padding: 16px;
+      text-align: center;
+      box-shadow: 0 16px 36px rgba(0,0,0,0.35);
+    }
+    .modal-card h2 {
+      font-size: 1.05rem;
+      color: #0b6e72;
+      margin-bottom: 6px;
+    }
+    .modal-card p {
+      font-size: 0.85rem;
+      color: #4a6364;
+      margin-bottom: 12px;
+      line-height: 1.35;
+    }
+    .modal-card img {
+      width: 100%;
+      max-height: 55vh;
+      object-fit: contain;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      background: #f5f2eb;
+    }
+    .modal-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
   </style>
 </head>
 <body>
@@ -171,7 +217,7 @@
     <input type="file" id="photoInput" accept="image/*" />
 
     <button type="button" class="btn btn-download" id="downloadBtn">
-      ⬇️ Baixar imagem para o Story
+      ⬇️ Salvar / Baixar imagem
     </button>
   </div>
 
@@ -179,7 +225,19 @@
     <strong>Como fazer:</strong><br/>
     1. Toque em <strong>Escolher minha foto</strong> e pegue da galeria.<br/>
     2. Arraste a foto com o dedo para encaixar seu rosto no arco.<br/>
-    3. Toque em <strong>Baixar imagem</strong> e poste nos Stories!
+    3. Toque em <strong>Salvar / Baixar imagem</strong> e poste nos Stories!
+  </div>
+
+  <div class="modal-backdrop" id="saveModal">
+    <div class="modal-card">
+      <h2>Sua imagem está pronta!</h2>
+      <p>No iPhone, <strong>toque e segure na imagem</strong> abaixo e escolha <strong>Salvar na Fototeca</strong> (ou toque em Compartilhar).</p>
+      <img id="finalPreviewImg" alt="Imagem pronta para Story" />
+      <div class="modal-actions">
+        <button type="button" class="btn btn-primary" id="shareNativeBtn">📤 Compartilhar / Salvar</button>
+        <button type="button" class="btn btn-secondary" id="closeModalBtn">Voltar e ajustar</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -194,13 +252,17 @@
     const zoomIn = document.getElementById('zoomIn');
     const zoomOut = document.getElementById('zoomOut');
 
+    const saveModal = document.getElementById('saveModal');
+    const finalPreviewImg = document.getElementById('finalPreviewImg');
+    const shareNativeBtn = document.getElementById('shareNativeBtn');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+
     const frameImg = new Image();
     frameImg.src = 'moldura.png';
 
     let userImg = null;
-    // Centro aproximado do arco na arte (X: 540, Y: 960)
     let imgX = 540;
-    let imgY = 960;
+    let imgY = 980;
     let imgScale = 1;
 
     let isDragging = false;
@@ -211,8 +273,6 @@
 
     function render() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Fundo neutro claro por trás do arco
       ctx.fillStyle = '#f4f1ea';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -240,7 +300,6 @@
         const img = new Image();
         img.onload = () => {
           userImg = img;
-          // Ajusta escala inicial para cobrir bem a área do arco (~620x720 px)
           const scaleW = 650 / img.width;
           const scaleH = 760 / img.height;
           imgScale = Math.max(scaleW, scaleH);
@@ -264,7 +323,6 @@
       reader.readAsDataURL(file);
     });
 
-    // Controle de zoom
     zoomSlider.addEventListener('input', (e) => {
       imgScale = parseFloat(e.target.value);
       render();
@@ -282,7 +340,6 @@
       render();
     });
 
-    // Arrastar com mouse ou dedo
     function getCanvasCoords(clientX, clientY) {
       const rect = canvas.getBoundingClientRect();
       return {
@@ -348,9 +405,34 @@
       initialPinchDist = null;
     });
 
-    // Download / Compartilhar no celular
     downloadBtn.addEventListener('click', () => {
       if (!userImg) return;
+      const dataUrl = canvas.toDataURL('image/png', 1.0);
+      finalPreviewImg.src = dataUrl;
+      saveModal.classList.add('active');
+    });
+
+    closeModalBtn.addEventListener('click', () => {
+      saveModal.classList.remove('active');
+    });
+
+    shareNativeBtn.addEventListener('click', async () => {
+      if (!userImg) return;
+      try {
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png', 1.0));
+        const file = new File([blob], 'eu-vou-imersao-ellas-2026.png', { type: 'image/png' });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'Eu Vou - Imersão ELLAS 2026'
+          });
+          return;
+        }
+      } catch (err) {
+        // Caso o compartilhamento nativo seja cancelado ou bloqueado, mantém a imagem visível para salvar manualmente
+      }
+
       const dataUrl = canvas.toDataURL('image/png', 1.0);
       const link = document.createElement('a');
       link.download = 'eu-vou-imersao-ellas-2026.png';
